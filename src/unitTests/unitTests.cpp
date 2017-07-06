@@ -198,7 +198,7 @@ TEST(activeClass, runThreadOK_1)
   ASSERT_THAT(0, Eq(threadResult));
   // check that the thread data in this scope are not changed
   ASSERT_THAT(89, Eq(arg.x));
-  // chech that the thread data were modified and contains the expected value
+  // chech that the thread data were modified by the thread and contains the expected value
   ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
 }
 
@@ -257,7 +257,7 @@ TEST(activeClass, runThreadOK_2)
   ASSERT_THAT(0, Eq(threadResult));
   // check that the thread data in this scope are not changed
   ASSERT_THAT(89, Eq(arg.x));
-  // chech that the thread data were modified and contains the expected value
+  // chech that the thread data were modified by the thread and contains the expected value
   ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
 }
 
@@ -308,7 +308,7 @@ TEST(activeClass, runThreadPrologueFailure)
   ASSERT_THAT(0, Eq(threadResult));
   // check that the thread data in this scope are not changed
   ASSERT_THAT(89, Eq(arg.x));
-  // check that the thread data were modified and contains the expected value
+  // check that the thread data were modified by the thread and contains the expected value
   ASSERT_THAT(24, Eq(acptr.get()->getThreadData().x));
 }
 
