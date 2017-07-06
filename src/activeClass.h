@@ -20,16 +20,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 namespace activeClass
 {
-// create a Thing of type T and return a std::unique_ptr to it
-template <typename T, typename... Args>
-std::unique_ptr<T> create_thing(Args... args)
-{
-  std::unique_ptr<T> local_ptr(new T(args...));
-  return local_ptr; // local_ptr will surrender ownership;
-                    // the compiler should optimize the return as if it was:
-                    // return std::move(local_ptr);
-}
-
 class baseActiveClass
 {
 public:
@@ -57,7 +47,7 @@ template <typename T, typename U>
 using bodyFun = std::function<T(U&)>;
 
 template <typename T, typename U>
-class activeClass :public baseActiveClass
+class activeClass : public baseActiveClass
 {
 public:
   activeClass() = default;
@@ -165,6 +155,12 @@ public:
     return threadResult;
   }
 
+  std::future_status checkThread(const std::chrono::milliseconds& delay)
+  {
+    // blocks for delay milliseconds
+    return getThreadFuture().wait_for(delay);
+  }
+
 private:
   prologueFun<U> pfun_{};
   epilogueFun<U> efun_{};
@@ -190,9 +186,24 @@ private:
 };  // class activeClass
 
 template <typename T, typename U>
-std::unique_ptr<activeClass<T,U>> makeActiveClass (const prologueFun<U>& pfun,
-                                                   const bodyFun<T,U>& bodyfun,
-                                                   const epilogueFun<U>& efun) noexcept
+using activeClassPtr = std::unique_ptr<activeClass<T,U>>;
+
+// create a Thing of type T and return a std::unique_ptr to it
+template <typename T, typename... Args>
+static std::unique_ptr<T>
+create_thing(Args... args)
+{
+  std::unique_ptr<T> local_ptr(new T(args...));
+  return local_ptr; // local_ptr will surrender ownership;
+                    // the compiler should optimize the return as if it was:
+                    // return std::move(local_ptr);
+}
+
+template <typename T, typename U>
+activeClassPtr<T,U>
+makeActiveClass (const prologueFun<U>& pfun,
+                 const bodyFun<T,U>& bodyfun,
+                 const epilogueFun<U>& efun) noexcept
 {
   return create_thing<activeClass<T,U>>(pfun, bodyfun, efun);
 }

@@ -39,7 +39,8 @@ TEST(activeClass, activeClassVersion)
 
 TEST(activeClass, makeActiveClassObject)
 {
-  std::unique_ptr<activeClass::activeClass<int,int>> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
 
   ASSERT_THAT(v, Eq(expectedVersion));
@@ -47,9 +48,12 @@ TEST(activeClass, makeActiveClassObject)
 
 TEST(activeClass, runNoThread_1)
 {
-  std::unique_ptr<activeClass::activeClass<int,int>> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
 
+  // run all the provided functions without generating a new thread; run synch
+  // in this thread
   acptr.get()->activeClass<int,int>::run(5);
 
   ASSERT_THAT(5, Eq(acptr.get()->getThreadData()));
@@ -57,7 +61,8 @@ TEST(activeClass, runNoThread_1)
 
 TEST(activeClass, runNoThread_2)
 {
-  std::unique_ptr<activeClass::activeClass<int,int>> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
   int arg{5};
 
@@ -89,12 +94,15 @@ TEST(activeClass, runNoThread_3)
     arg.x = 89;
     return arg.x;
   };
-  
-  std::unique_ptr<activeClass::activeClass<int,threadData_t>> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
+
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
 
   threadData_t arg{89};
 
+  // run all the provided functions without generating a new thread; run synch
+  // in this thread
   acptr.get()->activeClass<int,threadData_t>::run(arg);
 
   ASSERT_THAT(56, Eq(acptr.get()->getThreadData().x));
@@ -127,8 +135,9 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
     }
     return arg.x;
   };
-  
-  std::unique_ptr<activeClass::activeClass<int,threadData_t>> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
+
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
   threadData_t arg{89};
 
@@ -143,7 +152,7 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
   ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
 }
 
-TEST(activeClass, runThreadOK)
+TEST(activeClass, runThreadOK_1)
 {
   using threadData_t = struct {
     int x{};
@@ -171,8 +180,8 @@ TEST(activeClass, runThreadOK)
     return arg.x;
   };
 
-  // create the active class object with the functions 
-  std::unique_ptr<activeClass::activeClass<int,threadData_t>> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
   threadData_t arg{89};
 
@@ -183,6 +192,65 @@ TEST(activeClass, runThreadOK)
   acptr.get()->activeClass<int,threadData_t>::runThread(arg);
   
   // blocked here until the end of the thread
+  int threadResult = acptr.get()->activeClass<int,threadData_t>::waitThreadEnds();
+
+  // check that the thread returned the expected value
+  ASSERT_THAT(0, Eq(threadResult));
+  // check that the thread data in this scope are not changed
+  ASSERT_THAT(89, Eq(arg.x));
+  // chech that the thread data were modified and contains the expected value
+  ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
+}
+
+TEST(activeClass, runThreadOK_2)
+{
+  using threadData_t = struct {
+    int x{};
+  };
+
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg) -> bool
+  {
+    arg.x = 24;
+    return false;
+  };
+
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg) -> bool
+  {
+    arg.x++;
+    return false;
+  };
+
+  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
+  {
+    for ( unsigned int i = 0; i < 20; ++i)
+    {
+      arg.x = i;
+      usleep(1000);
+    }
+    return arg.x;
+  };
+
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
+
+  threadData_t arg{89};
+
+  ASSERT_THAT(89, Eq(arg.x));
+  ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
+ 
+  // run the thread passing the thread data: arg is copied
+  acptr.get()->activeClass<int,threadData_t>::runThread(arg);
+  
+  // loop here until the end of the thread
+  std::future_status futureStatus{std::future_status::timeout};
+  while (futureStatus != std::future_status::ready)
+  {
+    // wait 10 msecs for the thread termination
+    // NB: if the thread does not end this loop goes on forever
+    futureStatus = acptr.get()->activeClass<int,threadData_t>::checkThread(std::chrono::milliseconds(10));
+  }
+
+  // blocked here until the end of the thread; however, the thread is terminated
   int threadResult = acptr.get()->activeClass<int,threadData_t>::waitThreadEnds();
 
   // check that the thread returned the expected value
@@ -222,8 +290,8 @@ TEST(activeClass, runThreadPrologueFailure)
     return arg.x;
   };
 
-  // create the active class object with the functions 
-  std::unique_ptr<activeClass::activeClass<int,threadData_t>> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
+  // create the active class object with the functions
+  activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
   threadData_t arg{89};
 
