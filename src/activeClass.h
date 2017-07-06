@@ -120,7 +120,7 @@ public:
 
   void runThread(const U& threadData) noexcept
   {
-    // thread body is a lambda
+    // the thread gets a lambda
 //    auto threadLambda = [&]() -> int {
 //      setThreadData(threadData);
 //      activeClassBody();
@@ -129,6 +129,9 @@ public:
 //    };
 //    setThreadFuture(std::async(std::launch::async,threadLambda));
 
+    // the thread gets a lambda; it cannot be a class method because it should be
+    // declared static, and this would break the class design, so that's why we
+    // use a lambda here capturing by reference the thread data and this
     setThreadFuture(std::async(std::launch::async,
                                [&]() -> int {
                                  setThreadData(threadData);
