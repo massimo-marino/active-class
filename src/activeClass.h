@@ -46,7 +46,6 @@ using epilogueFun = std::function<bool(U&)>;
 template <typename T, typename U>
 using bodyFun = std::function<T(U&)>;
 
-//<a name="activeClass"></a>
 template <typename T, typename U>
 class activeClass : public baseActiveClass
 {
@@ -174,7 +173,6 @@ private:
   
   std::future<int> threadFuture_{};
 
-//<a name="activeClassBody"></a>
   void activeClassBody() noexcept
   {
     setPrologueResult(pfun_(getThreadData()) );
