@@ -174,6 +174,7 @@ private:
   
   std::future<int> threadFuture_{};
 
+//<a name="activeClassBody"></a>
   void activeClassBody() noexcept
   {
     setPrologueResult(pfun_(getThreadData()) );
