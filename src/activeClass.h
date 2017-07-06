@@ -191,7 +191,7 @@ using activeClassPtr = std::unique_ptr<activeClass<T,U>>;
 // create a Thing of type T and return a std::unique_ptr to it
 template <typename T, typename... Args>
 static std::unique_ptr<T>
-create_thing(Args... args)
+create_thing(Args... args) noexcept
 {
   std::unique_ptr<T> local_ptr(new T(args...));
   return local_ptr; // local_ptr will surrender ownership;
