@@ -128,7 +128,7 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
 
   activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
   {
-    for ( unsigned int i = 0; i < 20; ++i)
+    for (unsigned int i = 0; i < 20; ++i)
     {
       arg.x = i;
       usleep(100000);
@@ -172,7 +172,7 @@ TEST(activeClass, runThreadOK_1)
 
   activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
   {
-    for ( unsigned int i = 0; i < 20; ++i)
+    for (unsigned int i = 0; i < 20; ++i)
     {
       arg.x = i;
       usleep(100000);
@@ -222,7 +222,7 @@ TEST(activeClass, runThreadOK_2)
 
   activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
   {
-    for ( unsigned int i = 0; i < 20; ++i)
+    for (unsigned int i = 0; i < 20; ++i)
     {
       arg.x = i;
       usleep(1000);

@@ -44,5 +44,6 @@ if ( false == prologueResult )
   epilogueResult = epilogue(threadData);
 }
 ```
+See the class `activeClass` and its method `void activeClassBody()` for the details.
 
 The unit tests named `runThreadOK_1` and `runThreadOK_2` provide examples of usage of the active class concept.
