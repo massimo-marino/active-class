@@ -38,7 +38,7 @@ The thread runs as follows:
 ```C++
 bool epilogueResul{};
 bool prologueResult = prologue(threadData);
-if ( false == result )
+if ( false == prologueResult )
 {
   body(threadData);
   epilogueResult = epilogue(threadData);
