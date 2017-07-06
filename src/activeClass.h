@@ -46,6 +46,7 @@ using epilogueFun = std::function<bool(U&)>;
 template <typename T, typename U>
 using bodyFun = std::function<T(U&)>;
 
+//<a name="activeClass"></a>
 template <typename T, typename U>
 class activeClass : public baseActiveClass
 {
