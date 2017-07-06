@@ -36,7 +36,7 @@ The prologue and the epilogue return a `bool`, the body returns a client defined
 The thread runs as follows:
 
 ```C++
-bool epilogueResul{};
+bool epilogueResult{};
 bool prologueResult = prologue(threadData);
 if ( false == prologueResult )
 {
