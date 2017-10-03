@@ -201,14 +201,7 @@ using activeClassPtr = std::unique_ptr<activeClass<T,U>>;
 template <typename T, typename... Args>
 auto create_unique_ptr(Args&&... args) -> std::unique_ptr<T>
 {
-  // since C++14
   return std::make_unique<T>(args...);
-
-  // before C++14:  
-  //std::unique_ptr<T> local_ptr(new T(args...));
-  //return local_ptr; // local_ptr will surrender ownership;
-                    // the compiler should optimize the return as if it was:
-                    // return std::move(local_ptr);
 }
 
 template <typename T, typename U>
