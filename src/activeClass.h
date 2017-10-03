@@ -15,101 +15,75 @@
 #define ACTIVECLASS_H
 
 #include <iostream>
-#include <string>
 #include <future>
 ////////////////////////////////////////////////////////////////////////////////
 namespace activeClass
 {
+template <typename T, typename U>
+using threadResult = std::tuple<const bool, T, const bool, U&>;
+
+using fut = std::future<int>;
+
 class baseActiveClass
 {
 public:
   baseActiveClass() = default;
-  virtual ~baseActiveClass() = default;
-
-  static std::string activeClassVersion () noexcept;
-
-private:
+  ~baseActiveClass() = default;
   // copy forbidden
-  baseActiveClass(const baseActiveClass& rhs);
+  baseActiveClass(const baseActiveClass& rhs) = delete;
   // copy assignment forbidden
-  baseActiveClass& operator=(const baseActiveClass& rhs);
+  baseActiveClass& operator=(const baseActiveClass& rhs) = delete;
 
-  static std::string version_;
+  static const std::string& activeClassVersion () noexcept;
+  int waitThreadEnds();
+  std::future_status checkThread(const std::chrono::milliseconds& delay);
+
+ protected:
+  static const std::string version_;
+  bool prologueResult_ {};
+  bool epilogueResult_ {};
+  fut threadFuture_ {};
+
+  bool getPrologueResult() const noexcept;
+  void setPrologueResult(const bool result) noexcept;
+  bool getEpilogueResult() const noexcept;
+  void setEpilogueResult(const bool result) noexcept;
+  fut& getThreadFuture () noexcept;
+  void setThreadFuture(fut threadFuture) noexcept;
 };  // class baseActiveClass
 
 template <typename U>
-using prologueFun = std::function<bool(U&)>;
+using prologueFun = std::function<const bool&&(U&)>;
 
 template <typename U>
-using epilogueFun = std::function<bool(U&)>;
+using epilogueFun = std::function<const bool&&(U&)>;
 
 template <typename T, typename U>
 using bodyFun = std::function<T(U&)>;
 
 template <typename T, typename U>
-class activeClass : public baseActiveClass
+class activeClass final : public baseActiveClass
 {
 public:
   activeClass() = default;
   ~activeClass() = default;
+  // copy forbidden
+  activeClass(const activeClass& rhs) = delete;
+  // copy assignment forbidden
+  activeClass& operator=(const activeClass& rhs) = delete;
 
-  activeClass(const prologueFun<U>& pfun,
-              const bodyFun<T,U>& bodyfun,
-              const epilogueFun<U>& efun)
+  explicit activeClass(const prologueFun<U>& pfun,
+                       const bodyFun<T,U>& bodyfun,
+                       const epilogueFun<U>& efun)
   :
   pfun_(pfun),
   efun_(efun),
   bodyfun_(bodyfun)
-  {};
-
-  bool getPrologueResult() const noexcept
-  {
-    return prologueResult_;
-  }
-
-  void setPrologueResult(const bool result) noexcept
-  {
-    prologueResult_ = result;
-  }
-
-  bool getEpilogueResult() const noexcept
-  {
-    return epilogueResult_;
-  }
-
-  void setEpilogueResult(const bool result) noexcept
-  {
-    epilogueResult_ = result;
-  }
-
-  T getBodyResult () const noexcept
-  {
-    return bodyResult_;
-  }
-
-  void setBodyResult(const T result) noexcept
-  {
-    bodyResult_ = result;
-  }
+  {}
 
   U& getThreadData () noexcept
   {
     return threadData_;
-  }
-
-  void setThreadData(const U& threadData) noexcept
-  {
-    threadData_ = std::move(threadData);
-  }
-
-  std::future<int>& getThreadFuture () noexcept
-  {
-    return threadFuture_;
-  }
-
-  void setThreadFuture(std::future<int> threadFuture) noexcept
-  {
-    threadFuture_ = std::move(threadFuture);
   }
 
   void run(const U& threadData) noexcept
@@ -120,61 +94,38 @@ public:
 
   void runThread(const U& threadData) noexcept
   {
-    // the thread gets a lambda
-//    auto threadLambda = [&]() -> int {
-//      setThreadData(threadData);
-//      activeClassBody();
-//      
-//      return 0;
-//    };
-//    setThreadFuture(std::async(std::launch::async,threadLambda));
-
     // the thread gets a lambda; it cannot be a class method because it should be
     // declared static, and this would break the class design, so that's why we
     // use a lambda here capturing by reference the thread data and this
     setThreadFuture(std::async(std::launch::async,
                                [&]() -> int {
-                                 setThreadData(threadData);
-                                 activeClassBody();
+                                 run(threadData);
                                  return 0;
                                } ) );
   }
 
-  int waitThreadEnds()
-  {
-    int threadResult{-1};
-
-    try
-    {
-      threadResult = getThreadFuture().get();
-    }
-      catch (const std::exception& e)
-    {
-      std::cerr << __func__
-                << ": EXCEPTION: "
-                << e.what()
-                << std::endl;
-    }
-    return threadResult;
-  }
-
-  std::future_status checkThread(const std::chrono::milliseconds& delay)
-  {
-    // blocks for delay milliseconds
-    return getThreadFuture().wait_for(delay);
-  }
-
 private:
-  prologueFun<U> pfun_{};
-  epilogueFun<U> efun_{};
-  bodyFun<T,U> bodyfun_{};
+  prologueFun<U> pfun_ {};
+  epilogueFun<U> efun_ {};
+  bodyFun<T,U> bodyfun_ {};
 
-  bool prologueResult_{};
-  bool epilogueResult_{};
-  T bodyResult_{};
-  U threadData_{};
-  
-  std::future<int> threadFuture_{};
+  T bodyResult_ {};
+  U threadData_ {};
+
+  void setBodyResult(const T result) noexcept
+  {
+    bodyResult_ = result;
+  }
+
+  T getBodyResult () const noexcept
+  {
+    return bodyResult_;
+  }
+
+  void setThreadData(const U& threadData) noexcept
+  {
+    threadData_ = std::move(threadData);
+  }
 
   void activeClassBody() noexcept
   {
@@ -188,16 +139,22 @@ private:
   }
 };  // class activeClass
 
+////////////////////////////////////////////////////////////////////////////////
+// active class factory
+
 template <typename T, typename U>
 using activeClassPtr = std::unique_ptr<activeClass<T,U>>;
 
-// create a Thing of type T and return a std::unique_ptr to it
+// create an object of type T and return a std::unique_ptr to it
 template <typename T, typename... Args>
-static std::unique_ptr<T>
-create_thing(Args... args) noexcept
+auto create_unique_ptr(Args&&... args) -> std::unique_ptr<T>
 {
-  std::unique_ptr<T> local_ptr(new T(args...));
-  return local_ptr; // local_ptr will surrender ownership;
+  // since C++14
+  return std::make_unique<T>(args...);
+
+  // before C++14:  
+  //std::unique_ptr<T> local_ptr(new T(args...));
+  //return local_ptr; // local_ptr will surrender ownership;
                     // the compiler should optimize the return as if it was:
                     // return std::move(local_ptr);
 }
@@ -208,7 +165,7 @@ makeActiveClass (const prologueFun<U>& pfun,
                  const bodyFun<T,U>& bodyfun,
                  const epilogueFun<U>& efun) noexcept
 {
-  return create_thing<activeClass<T,U>>(pfun, bodyfun, efun);
+  return create_unique_ptr<activeClass<T,U>>(pfun, bodyfun, efun);
 }
 }  // namespace activeClass
 #endif /* ACTIVECLASS_H */

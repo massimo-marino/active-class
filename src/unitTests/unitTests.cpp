@@ -10,24 +10,6 @@
 
 using namespace ::testing;
 
-activeClass::prologueFun<int> pfun = [](int arg) -> bool
-{
-  arg++;
-  return false;
-};
-
-activeClass::epilogueFun<int> efun = [](int arg) -> bool
-{
-  arg++;
-  return false;
-};
-
-activeClass::bodyFun<int,int> bodyfun = [](int arg) -> int
-{
-  arg++;
-  return arg;
-};
-
 const std::string expectedVersion {"1.0.0"};
 
 TEST(activeClass, activeClassVersion)
@@ -39,6 +21,24 @@ TEST(activeClass, activeClassVersion)
 
 TEST(activeClass, makeActiveClassObject)
 {
+  activeClass::prologueFun<int> pfun = [](int arg)
+  {
+    arg++;
+    return false;
+  };
+
+  activeClass::bodyFun<int,int> bodyfun = [](int arg)
+  {
+    arg++;
+    return arg;
+  };
+
+  activeClass::epilogueFun<int> efun = [](int arg)
+  {
+    arg++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
@@ -48,6 +48,24 @@ TEST(activeClass, makeActiveClassObject)
 
 TEST(activeClass, runNoThread_1)
 {
+activeClass::prologueFun<int> pfun = [](int arg)
+  {
+    arg++;
+    return false;
+  };
+
+  activeClass::bodyFun<int,int> bodyfun = [](int arg)
+  {
+    arg++;
+    return arg;
+  };
+
+  activeClass::epilogueFun<int> efun = [](int arg)
+  {
+    arg++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
@@ -61,11 +79,31 @@ TEST(activeClass, runNoThread_1)
 
 TEST(activeClass, runNoThread_2)
 {
+activeClass::prologueFun<int> pfun = [](int arg)
+  {
+    arg++;
+    return false;
+  };
+
+  activeClass::bodyFun<int,int> bodyfun = [](int arg)
+  {
+    arg++;
+    return arg;
+  };
+
+  activeClass::epilogueFun<int> efun = [](int arg)
+  {
+    arg++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
-  int arg{5};
+  int arg {5};
 
+  // run all the provided functions without generating a new thread; run synch
+  // in this thread
   acptr.get()->activeClass<int,int>::run(arg);
 
   ASSERT_THAT(arg, Eq(acptr.get()->getThreadData()));
@@ -74,32 +112,32 @@ TEST(activeClass, runNoThread_2)
 TEST(activeClass, runNoThread_3)
 {
   using threadData_t = struct {
-    int x{};
+    int x {};
   };
 
-  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg) -> bool
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
   {
     arg.x = 24;
     return false;
   };
 
-  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg) -> bool
-  {
-    arg.x = 56;
-    return false;
-  };
-
-  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
+  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg)
   {
     arg.x = 89;
     return arg.x;
   };
 
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  {
+    arg.x = 56;
+    return false;
+  };
+  
   // create the active class object with the functions
   activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
 
-  threadData_t arg{89};
+  threadData_t arg {89};
 
   // run all the provided functions without generating a new thread; run synch
   // in this thread
@@ -111,24 +149,19 @@ TEST(activeClass, runNoThread_3)
 TEST(activeClass, runNoThreadWaitThreadEndsError)
 {
   using threadData_t = struct {
-    int x{};
+    int x {};
   };
 
-  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg) -> bool
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
+    
   {
     arg.x = 24;
     return false;
   };
 
-  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg) -> bool
+  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg)
   {
-    arg.x++;
-    return false;
-  };
-
-  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
-  {
-    for (unsigned int i = 0; i < 20; ++i)
+    for (int i {0}; i < 20; ++i)
     {
       arg.x = i;
       usleep(100000);
@@ -136,10 +169,16 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
     return arg.x;
   };
 
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  {
+    arg.x++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
-  threadData_t arg{89};
+  threadData_t arg {89};
 
   ASSERT_THAT(89, Eq(arg.x));
   ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
@@ -155,24 +194,18 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
 TEST(activeClass, runThreadOK_1)
 {
   using threadData_t = struct {
-    int x{};
+    int x {};
   };
 
-  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg) -> bool
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
   {
     arg.x = 24;
     return false;
   };
 
-  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg) -> bool
+  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg)
   {
-    arg.x++;
-    return false;
-  };
-
-  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
-  {
-    for (unsigned int i = 0; i < 20; ++i)
+    for (int i {0}; i < 20; ++i)
     {
       arg.x = i;
       usleep(100000);
@@ -180,10 +213,16 @@ TEST(activeClass, runThreadOK_1)
     return arg.x;
   };
 
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  {
+    arg.x++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
-  threadData_t arg{89};
+  threadData_t arg {89};
 
   ASSERT_THAT(89, Eq(arg.x));
   ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
@@ -205,24 +244,18 @@ TEST(activeClass, runThreadOK_1)
 TEST(activeClass, runThreadOK_2)
 {
   using threadData_t = struct {
-    int x{};
+    int x {};
   };
 
-  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg) -> bool
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
   {
     arg.x = 24;
     return false;
   };
 
-  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg) -> bool
+  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg)
   {
-    arg.x++;
-    return false;
-  };
-
-  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
-  {
-    for (unsigned int i = 0; i < 20; ++i)
+    for (int i {0}; i < 20; ++i)
     {
       arg.x = i;
       usleep(1000);
@@ -230,10 +263,16 @@ TEST(activeClass, runThreadOK_2)
     return arg.x;
   };
 
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  {
+    arg.x++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
-  threadData_t arg{89};
+  threadData_t arg {89};
 
   ASSERT_THAT(89, Eq(arg.x));
   ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
@@ -264,25 +303,19 @@ TEST(activeClass, runThreadOK_2)
 TEST(activeClass, runThreadPrologueFailure)
 {
   using threadData_t = struct {
-    int x{};
+    int x {};
   };
 
-  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg) -> bool
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
   {
     arg.x = 24;
     // return true to simulate a failure in the prologue
     return true;
   };
 
-  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg) -> bool
+  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg)
   {
-    arg.x++;
-    return false;
-  };
-
-  activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg) -> int
-  {
-    for (unsigned int i = 0; i < 20; ++i)
+    for (int i {0}; i < 20; ++i)
     {
       arg.x = i;
       usleep(100000);
@@ -290,10 +323,16 @@ TEST(activeClass, runThreadPrologueFailure)
     return arg.x;
   };
 
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  {
+    arg.x++;
+    return false;
+  };
+
   // create the active class object with the functions
   activeClass::activeClassPtr<int,threadData_t> acptr = activeClass::makeActiveClass<int,threadData_t>(pfun, bodyfun, efun);
 
-  threadData_t arg{89};
+  threadData_t arg {89};
 
   ASSERT_THAT(89, Eq(arg.x));
   ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
@@ -309,7 +348,7 @@ TEST(activeClass, runThreadPrologueFailure)
   // check that the thread data in this scope are not changed
   ASSERT_THAT(89, Eq(arg.x));
   // check that the thread data were modified by the thread and contains the expected value
-  ASSERT_THAT(24, Eq(acptr.get()->getThreadData().x));
+  ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
 }
 
 //int main(int argc, char **argv) {
