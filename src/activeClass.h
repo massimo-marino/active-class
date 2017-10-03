@@ -19,12 +19,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 namespace activeClass
 {
-template <typename T, typename U>
-using threadResult = std::tuple<const bool, T, const bool, U>;
-
-template <typename T, typename U>
-using fut = std::future<threadResult<T,U>>;
-
 class baseActiveClass
 {
 public:
@@ -36,9 +30,11 @@ public:
   baseActiveClass& operator=(const baseActiveClass& rhs) = delete;
 
   static const std::string& activeClassVersion () noexcept;
+  std::thread::id getThreadId () const noexcept;
 
  protected:
   static const std::string version_;
+  mutable std::thread::id threadId_ {};
   mutable bool prologueResult_ {};
   mutable bool epilogueResult_ {};
 
@@ -47,6 +43,12 @@ public:
   bool getEpilogueResult() const noexcept;
   void setEpilogueResult(const bool result) const noexcept;
 };  // class baseActiveClass
+
+template <typename T, typename U>
+using threadResult = std::tuple<const bool, T, const bool, U>;
+
+template <typename T, typename U>
+using fut = std::future<threadResult<T,U>>;
 
 template <typename U>
 using prologueFun = std::function<const bool&&(U&)>;
@@ -140,13 +142,7 @@ public:
     return getThreadFuture().wait_for(std::chrono::nanoseconds{0});
   }
 
-  std::thread::id getThreadId () const noexcept
-  {
-    return threadId_;
-  }
-
  private:
-  mutable std::thread::id threadId_ {};
   mutable fut<T,U> threadFuture_ {};
   prologueFun<U> pfun_ {};
   epilogueFun<U> efun_ {};

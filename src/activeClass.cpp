@@ -28,6 +28,11 @@ const std::string& baseActiveClass::activeClassVersion () noexcept
 
 }  // activeClassVersion
 ////////////////////////////////////////////////////////////////////////////////
+std::thread::id baseActiveClass::getThreadId () const noexcept
+{
+  return threadId_;
+}
+  
 bool baseActiveClass::getPrologueResult() const noexcept
 {
   return prologueResult_;
