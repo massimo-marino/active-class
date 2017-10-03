@@ -5,6 +5,9 @@ A C++17 implementation of an active class: an active class generates a thread an
 
 The cmake file compiles with `-std=c++1z`.
 
+The unit tests are implemented in googletest: be sure you have installed googletest to compile.
+
+
 ## Install and Run Unit Tests
 
 ```bash
@@ -19,7 +22,6 @@ $ ./unitTests
 ```
 The unit tests provide examples of usage of active classes.
 
-The unit tests are implemented in googletest: be sure you have installed googletest to compile.
 
 ## The Active Class
 
