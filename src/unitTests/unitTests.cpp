@@ -1,7 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/* 
+ * File:   unitTests.cpp
+ * Author: massimo
+ *
+ * Created on June 19, 2017, 10:43 AM
  */
 
 #include "../activeClass.h"
@@ -75,11 +76,13 @@ activeClass::prologueFun<int> pfun = [](int arg)
 
   // run all the provided functions without generating a new thread; run synch
   // in this thread
-  acptr.get()->activeClass<int,int>::run(5);
+  auto [prologueResult, bodyResult, epilogueResult, thrData] = acptr.get()->activeClass<int,int>::run(5);
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_EQ(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(6, bodyResult);
   ASSERT_EQ(5, acptr.get()->getThreadData());
+  ASSERT_EQ(5, thrData);
 }
 
 TEST(activeClass, runNoThread_2)
@@ -105,15 +108,18 @@ activeClass::prologueFun<int> pfun = [](int arg)
   // create the active class object with the functions
   activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
+
   int arg {5};
 
   // run all the provided functions without generating a new thread; run synch
   // in this thread
-  acptr.get()->activeClass<int,int>::run(arg);
+  auto [prologueResult, bodyResult, epilogueResult, thrData] = acptr.get()->activeClass<int,int>::run(arg);
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_EQ(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(6, bodyResult);
   ASSERT_EQ(arg, acptr.get()->getThreadData());
+  ASSERT_EQ(arg, thrData);
 }
 
 TEST(activeClass, runNoThread_3)
@@ -130,7 +136,7 @@ TEST(activeClass, runNoThread_3)
 
   activeClass::bodyFun<int,threadData_t> bodyfun = [](threadData_t& arg)
   {
-    arg.x = 89;
+    arg.x = 78;
     return arg.x;
   };
 
@@ -148,11 +154,13 @@ TEST(activeClass, runNoThread_3)
 
   // run all the provided functions without generating a new thread; run synch
   // in this thread
-  acptr.get()->activeClass<int,threadData_t>::run(arg);
+  auto [prologueResult, bodyResult, epilogueResult, thrData] = acptr.get()->run(arg);
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_EQ(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(78, bodyResult);
   ASSERT_EQ(56, acptr.get()->getThreadData().x);
+  ASSERT_EQ(56, thrData.x);
 }
 
 TEST(activeClass, runNoThreadWaitThreadEndsError)
@@ -192,14 +200,17 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
   ASSERT_EQ(89, arg.x);
   ASSERT_EQ(0, acptr.get()->getThreadData().x);
 
-  // since no thread was run bodyResult is 0
+  // since no thread is run bodyResult is 0
   auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_NE(tid, acptr.get()->getThreadId());
-  ASSERT_EQ(0, bodyResult);
   ASSERT_EQ(89, arg.x);
   ASSERT_EQ(0, acptr.get()->getThreadData().x);
+  ASSERT_EQ(false, prologueResult);
+  ASSERT_EQ(0, bodyResult);
+  ASSERT_EQ(false, epilogueResult);
+  ASSERT_EQ(0, threadData.x);
 }
 
 TEST(activeClass, runThreadOK_1)
@@ -239,10 +250,8 @@ TEST(activeClass, runThreadOK_1)
   ASSERT_EQ(0, acptr.get()->getThreadData().x);
  
   // run the thread passing the thread data: arg is copied
-  acptr.get()->activeClass<int,threadData_t>::runThread(arg);
-  
   // blocked here until the end of the thread
-  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
+  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->runThreadAndWaitTermination(arg);
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_NE(tid, acptr.get()->getThreadId());
@@ -292,10 +301,8 @@ TEST(activeClass, runThreadOK_2)
   ASSERT_EQ(0, acptr.get()->getThreadData().x);
  
   // run the thread passing the thread data: arg is copied
-  acptr.get()->activeClass<int,threadData_t>::runThread(arg);
-
   // blocked here until the end of the thread
-  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
+  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->runThreadAndWaitTermination(arg);
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_NE(tid, acptr.get()->getThreadId());
@@ -395,6 +402,7 @@ TEST(activeClass, runThreadOK_3)
   // run the thread passing the thread data: arg is copied
   acptr.get()->activeClass<std::string,threadData_t>::runThread(arg);
 
+  // blocked here until the end of the thread
   auto [prologueResult, bodyResult, epilogueResult, thrData] = acptr.get()->waitThreadEndsAndGetResults();
 
   std::thread::id tid = std::this_thread::get_id();
@@ -408,8 +416,3 @@ TEST(activeClass, runThreadOK_3)
   ASSERT_EQ(bodyResult, acptr.get()->getThreadData().s_);
   ASSERT_EQ(bodyResult, thrData.s_);
 }
-
-//int main(int argc, char **argv) {
-//  ::testing::InitGoogleTest(&argc, argv);
-//  return RUN_ALL_TESTS();
-//}
