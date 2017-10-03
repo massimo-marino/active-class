@@ -1,9 +1,9 @@
 # active-class
-A C++11 implementation of an active class: an active class generates a thread and controls it using functional objects passed by the client application
+A C++17 implementation of an active class: an active class generates a thread and controls it using functional objects passed by the client application
 
 ## Requirements
 
-The cmake file compiles with `-std=c++14` (but it would be fine also with `-std=c++11`).
+The cmake file compiles with `-std=c++1z`.
 
 ## Install and Run Unit Tests
 
@@ -29,7 +29,7 @@ The active class generates a thread whose function runs a sequence of three clie
 - a body
 - an epilogue
 
-All these functional objects are unary functions whose unique argument is a data structure provided by the calling application.
+All the above functional objects are unary functions whose unique argument is a data structure provided by the calling application.
 
 The prologue and the epilogue return a `bool`, the body returns a client defined type.
 
@@ -44,6 +44,6 @@ if ( false == prologueResult )
   epilogueResult = epilogue(threadData);
 }
 ```
-See the class [activeClass](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L50) and its method [void activeClassBody()](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L179)  for the details.
+See the class [activeClass](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L64) and its method [void activeClassBody()](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L130)  for the details.
 
-The unit tests named `runThreadOK_1` and `runThreadOK_2` provide examples of usage of the active class concept.
+The unit tests named `runThreadOK_1`, `runThreadOK_2`, and `runThreadOK_3` provide examples of usage of the active class concept.

@@ -16,7 +16,7 @@ TEST(activeClass, activeClassVersion)
 {
   std::string v = activeClass::baseActiveClass::activeClassVersion();
 
-  ASSERT_THAT(v, Eq(expectedVersion));
+  ASSERT_EQ(v, expectedVersion);
 }
 
 TEST(activeClass, makeActiveClassObject)
@@ -43,7 +43,10 @@ TEST(activeClass, makeActiveClassObject)
   activeClass::activeClassPtr<int,int> acptr = activeClass::makeActiveClass<int,int>(pfun, bodyfun, efun);
   std::string v = acptr.get()->activeClassVersion();
 
-  ASSERT_THAT(v, Eq(expectedVersion));
+  ASSERT_EQ(v, expectedVersion);
+
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_NE(tid, acptr.get()->getThreadId());
 }
 
 TEST(activeClass, runNoThread_1)
@@ -74,7 +77,9 @@ activeClass::prologueFun<int> pfun = [](int arg)
   // in this thread
   acptr.get()->activeClass<int,int>::run(5);
 
-  ASSERT_THAT(5, Eq(acptr.get()->getThreadData()));
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_EQ(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(5, acptr.get()->getThreadData());
 }
 
 TEST(activeClass, runNoThread_2)
@@ -106,7 +111,9 @@ activeClass::prologueFun<int> pfun = [](int arg)
   // in this thread
   acptr.get()->activeClass<int,int>::run(arg);
 
-  ASSERT_THAT(arg, Eq(acptr.get()->getThreadData()));
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_EQ(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(arg, acptr.get()->getThreadData());
 }
 
 TEST(activeClass, runNoThread_3)
@@ -143,7 +150,9 @@ TEST(activeClass, runNoThread_3)
   // in this thread
   acptr.get()->activeClass<int,threadData_t>::run(arg);
 
-  ASSERT_THAT(56, Eq(acptr.get()->getThreadData().x));
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_EQ(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(56, acptr.get()->getThreadData().x);
 }
 
 TEST(activeClass, runNoThreadWaitThreadEndsError)
@@ -180,15 +189,17 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
 
   threadData_t arg {89};
 
-  ASSERT_THAT(89, Eq(arg.x));
-  ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
-   
-  // since no thread was run waitThreadEnds() returns -1
-  int threadResult = acptr.get()->activeClass<int,threadData_t>::waitThreadEnds();
+  ASSERT_EQ(89, arg.x);
+  ASSERT_EQ(0, acptr.get()->getThreadData().x);
 
-  ASSERT_THAT(-1, Eq(threadResult));
-  ASSERT_THAT(89, Eq(arg.x));
-  ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
+  // since no thread was run bodyResult is 0
+  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
+
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_NE(tid, acptr.get()->getThreadId());
+  ASSERT_EQ(0, bodyResult);
+  ASSERT_EQ(89, arg.x);
+  ASSERT_EQ(0, acptr.get()->getThreadData().x);
 }
 
 TEST(activeClass, runThreadOK_1)
@@ -224,21 +235,24 @@ TEST(activeClass, runThreadOK_1)
 
   threadData_t arg {89};
 
-  ASSERT_THAT(89, Eq(arg.x));
-  ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
+  ASSERT_EQ(89, arg.x);
+  ASSERT_EQ(0, acptr.get()->getThreadData().x);
  
   // run the thread passing the thread data: arg is copied
   acptr.get()->activeClass<int,threadData_t>::runThread(arg);
   
   // blocked here until the end of the thread
-  int threadResult = acptr.get()->activeClass<int,threadData_t>::waitThreadEnds();
+  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
 
-  // check that the thread returned the expected value
-  ASSERT_THAT(0, Eq(threadResult));
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_NE(tid, acptr.get()->getThreadId());
+
+  // check that the thread body returned the expected value
+  ASSERT_EQ(19, bodyResult);
   // check that the thread data in this scope are not changed
-  ASSERT_THAT(89, Eq(arg.x));
-  // chech that the thread data were modified by the thread and contains the expected value
-  ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
+  ASSERT_EQ(89, arg.x);
+  // check that the thread data were modified by the thread and contains the expected value
+  ASSERT_EQ(20, acptr.get()->getThreadData().x);
 }
 
 TEST(activeClass, runThreadOK_2)
@@ -274,30 +288,24 @@ TEST(activeClass, runThreadOK_2)
 
   threadData_t arg {89};
 
-  ASSERT_THAT(89, Eq(arg.x));
-  ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
+  ASSERT_EQ(89, arg.x);
+  ASSERT_EQ(0, acptr.get()->getThreadData().x);
  
   // run the thread passing the thread data: arg is copied
   acptr.get()->activeClass<int,threadData_t>::runThread(arg);
-  
-  // loop here until the end of the thread
-  std::future_status futureStatus{std::future_status::timeout};
-  while (futureStatus != std::future_status::ready)
-  {
-    // wait 10 msecs for the thread termination
-    // NB: if the thread does not end this loop goes on forever
-    futureStatus = acptr.get()->activeClass<int,threadData_t>::checkThread(std::chrono::milliseconds(10));
-  }
 
-  // blocked here until the end of the thread; however, the thread is terminated
-  int threadResult = acptr.get()->activeClass<int,threadData_t>::waitThreadEnds();
+  // blocked here until the end of the thread
+  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
 
-  // check that the thread returned the expected value
-  ASSERT_THAT(0, Eq(threadResult));
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_NE(tid, acptr.get()->getThreadId());
+
+  // check that the thread body returned the expected value
+  ASSERT_EQ(19, bodyResult);
   // check that the thread data in this scope are not changed
-  ASSERT_THAT(89, Eq(arg.x));
-  // chech that the thread data were modified by the thread and contains the expected value
-  ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
+  ASSERT_EQ(89, arg.x);
+  // check that the thread data were modified by the thread and contains the expected value
+  ASSERT_EQ(20, acptr.get()->getThreadData().x);
 }
 
 TEST(activeClass, runThreadPrologueFailure)
@@ -334,21 +342,71 @@ TEST(activeClass, runThreadPrologueFailure)
 
   threadData_t arg {89};
 
-  ASSERT_THAT(89, Eq(arg.x));
-  ASSERT_THAT(0, Eq(acptr.get()->getThreadData().x));
- 
+  ASSERT_EQ(89, arg.x);
+  ASSERT_EQ(0,acptr.get()->getThreadData().x);
+
   // run the thread passing the thread data: arg is copied
   acptr.get()->activeClass<int,threadData_t>::runThread(arg);
-  
-  // blocked here until the end of the thread
-  int threadResult = acptr.get()->activeClass<int,threadData_t>::waitThreadEnds();
 
-  // check that the thread returned the expected value
-  ASSERT_THAT(0, Eq(threadResult));
+  // blocked here until the end of the thread
+  auto [prologueResult, bodyResult, epilogueResult, threadData] = acptr.get()->waitThreadEndsAndGetResults();
+
+   std::thread::id tid = std::this_thread::get_id();
+  ASSERT_NE(tid, acptr.get()->getThreadId());
+
+  // check that the thread body returned the expected value
+  ASSERT_EQ(19, bodyResult);
   // check that the thread data in this scope are not changed
-  ASSERT_THAT(89, Eq(arg.x));
+  ASSERT_EQ(89, arg.x);
   // check that the thread data were modified by the thread and contains the expected value
-  ASSERT_THAT(20, Eq(acptr.get()->getThreadData().x));
+  ASSERT_EQ(20, acptr.get()->getThreadData().x);
+}
+
+TEST(activeClass, runThreadOK_3)
+{
+  using threadData_t = struct {
+    std::string s_ {};
+  };
+
+  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
+  {
+    return false;
+  };
+
+  activeClass::bodyFun<std::string,threadData_t> bodyfun = [](threadData_t& arg)
+  {
+    arg.s_ = "this is a test";
+    return arg.s_;
+  };
+
+  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  {
+    return false;
+  };
+
+  // create the active class object with the functions
+  activeClass::activeClassPtr<std::string,threadData_t> acptr = activeClass::makeActiveClass<std::string,threadData_t>(pfun, bodyfun, efun);
+
+  threadData_t arg {};
+
+  ASSERT_EQ("", arg.s_);
+  ASSERT_EQ("", acptr.get()->getThreadData().s_);
+
+  // run the thread passing the thread data: arg is copied
+  acptr.get()->activeClass<std::string,threadData_t>::runThread(arg);
+
+  auto [prologueResult, bodyResult, epilogueResult, thrData] = acptr.get()->waitThreadEndsAndGetResults();
+
+  std::thread::id tid = std::this_thread::get_id();
+  ASSERT_NE(tid, acptr.get()->getThreadId());
+
+   // check that the thread body returned the expected value
+  ASSERT_EQ(bodyResult, "this is a test");
+  // check that the thread data in this scope are not changed
+  ASSERT_EQ("", arg.s_);
+  // check that the thread data were modified by the thread and contains the expected value
+  ASSERT_EQ(bodyResult, acptr.get()->getThreadData().s_);
+  ASSERT_EQ(bodyResult, thrData.s_);
 }
 
 //int main(int argc, char **argv) {
