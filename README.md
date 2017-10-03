@@ -44,6 +44,6 @@ if ( false == prologueResult )
   epilogueResult = epilogue(threadData);
 }
 ```
-See the class [activeClass](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L64) and its method [void activeClassBody()](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L182)  for the details.
+See the class [activeClass](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L60) and its method [void activeClassBody()](https://github.com/massimo-marino/active-class/blob/master/src/activeClass.h#L182)  for the details.
 
 The unit tests named `runThreadOK_1`, `runThreadOK_2`, and `runThreadOK_3` provide examples of usage of the active class concept.
