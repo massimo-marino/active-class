@@ -15,7 +15,7 @@ namespace activeClass
 {
 class baseActiveClass
 {
-public:
+ protected:
   baseActiveClass() = default;
   ~baseActiveClass() = default;
   // copy forbidden
@@ -23,10 +23,6 @@ public:
   // copy assignment forbidden
   baseActiveClass& operator=(const baseActiveClass& rhs) = delete;
 
-  static const std::string& activeClassVersion () noexcept;
-  std::thread::id getThreadId () const noexcept;
-
- protected:
   static const std::string version_;
   mutable std::thread::id threadId_ {};
   mutable bool prologueResult_ {};
@@ -36,6 +32,10 @@ public:
   void setPrologueResult(const bool result) const noexcept;
   bool getEpilogueResult() const noexcept;
   void setEpilogueResult(const bool result) const noexcept;
+
+ public:
+  static const std::string& activeClassVersion () noexcept;
+  std::thread::id getThreadId () const noexcept;
 };  // class baseActiveClass
 
 template <typename T, typename U>
@@ -195,7 +195,7 @@ using activeClassPtr = std::unique_ptr<activeClass<T,U>>;
 
 // create an object of type T and return a std::unique_ptr to it
 template <typename T, typename... Args>
-auto create_unique_ptr(Args&&... args) -> std::unique_ptr<T>
+auto createUniquePtr(Args&&... args) -> std::unique_ptr<T>
 {
   return std::make_unique<T>(args...);
 }
@@ -206,7 +206,7 @@ makeActiveClass (const prologueFun<U>& pfun,
                  const bodyFun<T,U>& bodyfun,
                  const epilogueFun<U>& efun) noexcept
 {
-  return create_unique_ptr<activeClass<T,U>>(pfun, bodyfun, efun);
+  return createUniquePtr<activeClass<T,U>>(pfun, bodyfun, efun);
 }
 }  // namespace activeClass
 #endif /* ACTIVECLASS_H */
