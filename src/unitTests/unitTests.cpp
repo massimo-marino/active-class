@@ -407,8 +407,8 @@ TEST(activeClass, runThreadOK_3)
 
   std::thread::id tid = std::this_thread::get_id();
   ASSERT_NE(tid, acptr.get()->getThreadId());
-
-   // check that the thread body returned the expected value
+  
+  // check that the thread body returned the expected value
   ASSERT_EQ(bodyResult, "this is a test");
   // check that the thread data in this scope are not changed
   ASSERT_EQ("", arg.s_);
