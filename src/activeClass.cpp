@@ -22,6 +22,9 @@ const std::string& baseActiveClass::activeClassVersion () noexcept
   return version_;
 
 }  // activeClassVersion
+
+baseActiveClass::~baseActiveClass()
+{}
 ////////////////////////////////////////////////////////////////////////////////
 std::thread::id baseActiveClass::getThreadId () const noexcept
 {

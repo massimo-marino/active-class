@@ -17,7 +17,7 @@ class baseActiveClass
 {
  protected:
   baseActiveClass() = default;
-  ~baseActiveClass() = default;
+  virtual ~baseActiveClass();
   // copy forbidden
   baseActiveClass(const baseActiveClass& rhs) = delete;
   // copy assignment forbidden
@@ -119,7 +119,7 @@ public:
       std::cerr << __func__
                 << ": EXCEPTION: "
                 << e.what()
-                << std::endl;
+                << '\n';
     }
     return std::make_tuple(bool{}, T{}, bool{}, U{});
   }
