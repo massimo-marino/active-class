@@ -90,7 +90,7 @@ public:
                            getThreadData());
   }
 
-  auto runThread(const U& threadData) const noexcept
+  auto& runThread(const U& threadData) const noexcept
   {
     // the thread gets a lambda; it cannot be a class method because it should be
     // declared static, and this would break the class design, so that's why we
@@ -99,12 +99,12 @@ public:
                                [&]() -> threadResult<T,U> {
                                  return run(threadData);
                                } ) );
-   return this;
+   return *this;
   }
 
   auto runThreadAndWaitTermination(const U& threadData) const -> threadResult<T,U>
   {
-    return runThread(threadData)->waitThreadEndsAndGetResults();
+    return runThread(threadData).waitThreadEndsAndGetResults();
   }
 
   auto waitThreadEndsAndGetResults() const -> threadResult<T,U>
