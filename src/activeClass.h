@@ -4,12 +4,16 @@
  *
  * Created on June 19, 2017, 10:43 AM
  */
-
-#ifndef ACTIVECLASS_H
-#define ACTIVECLASS_H
+#pragma once
 
 #include <iostream>
 #include <future>
+
+// BEGIN: ignore the warnings listed below when compiled with clang from here
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexit-time-destructors"
+#pragma clang diagnostic ignored "-Wpadded"
+#pragma clang diagnostic ignored "-Wglobal-constructors"
 ////////////////////////////////////////////////////////////////////////////////
 namespace activeClass
 {
@@ -18,23 +22,27 @@ class baseActiveClass
  protected:
   baseActiveClass() = default;
   virtual ~baseActiveClass();
-  // copy forbidden
-  baseActiveClass(const baseActiveClass& rhs) = delete;
-  // copy assignment forbidden
-  baseActiveClass& operator=(const baseActiveClass& rhs) = delete;
 
-  static const std::string version_;
+  static std::string version_;
   mutable std::thread::id threadId_ {};
   mutable bool prologueResult_ {};
   mutable bool epilogueResult_ {};
 
   bool getPrologueResult() const noexcept;
-  void setPrologueResult(const bool result) const noexcept;
+  void setPrologueResult(bool result) const noexcept;
   bool getEpilogueResult() const noexcept;
-  void setEpilogueResult(const bool result) const noexcept;
+  void setEpilogueResult(bool result) const noexcept;
 
  public:
-  static const std::string& activeClassVersion () noexcept;
+  // copy forbidden
+  baseActiveClass(const baseActiveClass& rhs) = delete;
+  // copy assignment forbidden
+  baseActiveClass& operator=(const baseActiveClass& rhs) = delete;
+  // the same for the move's
+  baseActiveClass(baseActiveClass&& rhs) = delete;
+  baseActiveClass& operator=(baseActiveClass&& rhs) = delete;
+
+  static std::string& activeClassVersion () noexcept;
   std::thread::id getThreadId () const noexcept;
 };  // class baseActiveClass
 
@@ -42,7 +50,7 @@ template <typename T, typename U>
 using threadResult = std::tuple<const bool, T, const bool, U>;
 
 template <typename T, typename U>
-using fut = std::future<threadResult<T,U>>;
+using fut = std::future<threadResult<T, U>>;
 
 template <typename U>
 using prologueFun = std::function<const bool&&(U&)>;
@@ -59,26 +67,33 @@ class activeClass final : public baseActiveClass
 public:
   activeClass() = default;
   ~activeClass() = default;
+
   // copy forbidden
   activeClass(const activeClass& rhs) = delete;
   // copy assignment forbidden
   activeClass& operator=(const activeClass& rhs) = delete;
+  // the same for the move's
+  activeClass(activeClass&& rhs) = delete;
+  activeClass& operator=(activeClass&& rhs) = delete;
 
-  explicit activeClass(const prologueFun<U>& pfun,
-                       const bodyFun<T,U>& bodyfun,
-                       const epilogueFun<U>& efun)
+  explicit
+  activeClass(const prologueFun<U>& pfun,
+              const bodyFun<T, U>& bodyfun,
+              const epilogueFun<U>& efun)
   :
   pfun_(pfun),
   efun_(efun),
   bodyfun_(bodyfun)
   {}
 
-  U& getThreadData () const noexcept
+  U&
+  getThreadData () const noexcept
   {
     return threadData_;
   }
 
-  auto run(const U& threadData) const noexcept -> threadResult<T,U>
+  auto
+  run(const U& threadData) const noexcept -> threadResult<T, U>
   {
     threadId_ = std::this_thread::get_id();
     setThreadData(threadData);
@@ -90,24 +105,27 @@ public:
                            getThreadData());
   }
 
-  auto& runThread(const U& threadData) const noexcept
+  auto&
+  runThread(const U& threadData) const noexcept
   {
     // the thread gets a lambda; it cannot be a class method because it should be
     // declared static, and this would break the class design, so that's why we
     // use a lambda here capturing by reference the thread data and this
     setThreadFuture(std::async(std::launch::async,
-                               [&]() -> threadResult<T,U> {
+                               [&]() -> threadResult<T, U> {
                                  return run(threadData);
                                } ) );
    return *this;
   }
 
-  auto runThreadAndWaitTermination(const U& threadData) const -> threadResult<T,U>
+  auto
+  runThreadAndWaitTermination(const U& threadData) const -> threadResult<T, U>
   {
     return runThread(threadData).waitThreadEndsAndGetResults();
   }
 
-  auto waitThreadEndsAndGetResults() const -> threadResult<T,U>
+  auto
+  waitThreadEndsAndGetResults() const -> threadResult<T, U>
   {
     try
     {
@@ -124,7 +142,8 @@ public:
     return std::make_tuple(bool{}, T{}, bool{}, U{});
   }
 
-  std::future_status waitThreadTerminate(const std::chrono::nanoseconds& delay) const noexcept
+  std::future_status
+  waitThreadTerminate(const std::chrono::nanoseconds& delay) const noexcept
   {
     std::future_status futureStatus{std::future_status::timeout};
     // loop here until the end of the thread
@@ -137,52 +156,59 @@ public:
     return futureStatus;
   }
 
-  std::future_status getThreadStatus() const noexcept
+  std::future_status
+  getThreadStatus() const noexcept
   {
     return getThreadFuture().wait_for(std::chrono::nanoseconds{0});
   }
 
  private:
-  mutable fut<T,U> threadFuture_ {};
+  mutable fut<T, U> threadFuture_ {};
   prologueFun<U> pfun_ {};
   epilogueFun<U> efun_ {};
-  bodyFun<T,U> bodyfun_ {};
+  bodyFun<T, U> bodyfun_ {};
   mutable T bodyResult_ {};
   mutable U threadData_ {};
 
-  fut<T,U>& getThreadFuture () const noexcept
+  fut<T, U>&
+  getThreadFuture () const noexcept
   {
     return threadFuture_;
   }
 
-  void setThreadFuture(fut<T,U> threadFuture) const noexcept
+  void
+  setThreadFuture(fut<T, U> threadFuture) const noexcept
   {
     threadFuture_ = std::move(threadFuture);
   }
 
-  void setBodyResult(const T result) const noexcept
+  void
+  setBodyResult(const T result) const noexcept
   {
     bodyResult_ = result;
   }
 
-  T getBodyResult () const noexcept
+  T
+  getBodyResult () const noexcept
   {
     return bodyResult_;
   }
 
-  void setThreadData(const U& threadData) const noexcept
+  void
+  setThreadData(const U& threadData) const noexcept
   {
     threadData_ = std::move(threadData);
   }
 
-  void activeClassBody() const noexcept
+  void
+  activeClassBody() const noexcept
   {
     setPrologueResult(pfun_(getThreadData()) );
 
-    if ( false == getPrologueResult() )
+    if ( !getPrologueResult() )
     {
-      setBodyResult(bodyfun_(getThreadData()) );
-      setEpilogueResult(efun_(getThreadData()) );
+      setBodyResult(bodyfun_(getThreadData()));
+      setEpilogueResult(efun_(getThreadData()));
     }
   }
 };  // class activeClass
@@ -191,22 +217,22 @@ public:
 // active class factory
 
 template <typename T, typename U>
-using activeClassPtr = std::unique_ptr<activeClass<T,U>>;
+using activeClassPtr = std::unique_ptr<activeClass<T, U>>;
 
 // create an object of type T and return a std::unique_ptr to it
 template <typename T, typename... Args>
-auto createUniquePtr(Args&&... args) -> std::unique_ptr<T>
+auto
+createUniquePtr(Args&&... args) -> std::unique_ptr<T>
 {
   return std::make_unique<T>(args...);
 }
 
 template <typename T, typename U>
-activeClassPtr<T,U>
+activeClassPtr<T, U>
 makeActiveClass (const prologueFun<U>& pfun,
-                 const bodyFun<T,U>& bodyfun,
+                 const bodyFun<T, U>& bodyfun,
                  const epilogueFun<U>& efun) noexcept
 {
   return createUniquePtr<activeClass<T,U>>(pfun, bodyfun, efun);
 }
 }  // namespace activeClass
-#endif /* ACTIVECLASS_H */

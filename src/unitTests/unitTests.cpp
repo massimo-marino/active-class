@@ -4,11 +4,17 @@
  *
  * Created on June 19, 2017, 10:43 AM
  */
-
 #include "../activeClass.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+// BEGIN: ignore the warnings listed below when compiled with clang from here
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+#pragma clang diagnostic ignored "-Wexit-time-destructors"
+#pragma clang diagnostic ignored "-Wpadded"
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+////////////////////////////////////////////////////////////////////////////////
 using namespace ::testing;
 
 const std::string expectedVersion {"1.0.0"};
@@ -170,7 +176,6 @@ TEST(activeClass, runNoThreadWaitThreadEndsError)
   };
 
   activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
-    
   {
     arg.x = 24;
     return false;
@@ -375,7 +380,7 @@ TEST(activeClass, runThreadOK_3)
     std::string s_ {};
   };
 
-  activeClass::prologueFun<threadData_t> pfun = [](threadData_t& arg)
+  activeClass::prologueFun<threadData_t> pfun = []([[maybe_unused]] threadData_t& arg)
   {
     return false;
   };
@@ -386,7 +391,7 @@ TEST(activeClass, runThreadOK_3)
     return arg.s_;
   };
 
-  activeClass::epilogueFun<threadData_t> efun = [](threadData_t& arg)
+  activeClass::epilogueFun<threadData_t> efun = []([[maybe_unused]] threadData_t& arg)
   {
     return false;
   };
@@ -416,3 +421,6 @@ TEST(activeClass, runThreadOK_3)
   ASSERT_EQ(bodyResult, acptr.get()->getThreadData().s_);
   ASSERT_EQ(bodyResult, thrData.s_);
 }
+
+#pragma clang diagnostic pop
+// END: ignore the warnings when compiled with clang up to here
